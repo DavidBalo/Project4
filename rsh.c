@@ -54,13 +54,11 @@ void* messageListener(void *arg) {
     struct message m;
     int readfd, dummyfd;
 
-    // make sure our FIFO exists
+    /* make sure our FIFO exists */
     mkfifo(uName, 0666);
 
-    // open read-end and a dummy write-end so read() won't see EOF
     readfd  = open(uName, O_RDONLY);
     dummyfd = open(uName, O_WRONLY);
-
     if (readfd < 0 || dummyfd < 0) {
         perror("opening user FIFO failed");
         pthread_exit((void*)1);
@@ -68,15 +66,13 @@ void* messageListener(void *arg) {
 
     while (1) {
         if (read(readfd, &m, sizeof(m)) > 0) {
-            printf("\nIncoming message from %s: %s\n", m.source, m.msg);
+            /* NO leading newline here */
+            printf("Incoming message from %s: %s\n", m.source, m.msg);
             fflush(stdout);
-            // reprint prompt in case user was typing
-            fprintf(stderr, "rsh>");
-            fflush(stderr);
         }
     }
 
-    // never reached
+    /* unreachable */
     close(readfd);
     close(dummyfd);
     pthread_exit((void*)0);
@@ -104,7 +100,7 @@ int main(int argc, char **argv) {
     signal(SIGINT, terminate);
     strcpy(uName, argv[1]);
 
-    // listener thread
+    /* spin up listener */
     pthread_t tid;
     pthread_create(&tid, NULL, messageListener, NULL);
     pthread_detach(tid);
@@ -158,11 +154,11 @@ int main(int argc, char **argv) {
             continue;
         }
 
-        // external command
+        /* external command */
         cargv = malloc(sizeof(char*));
         cargv[0] = strdup(cmd);
         int n = 1;
-        char *arg = strtok(line2, " ");  // skip cmd
+        char *arg = strtok(line2, " ");
         while ((arg = strtok(NULL, " ")) != NULL) {
             n++;
             cargv = realloc(cargv, sizeof(char*) * n);
