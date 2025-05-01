@@ -1,3 +1,5 @@
+// server.c
+// David Baloyi
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -13,62 +15,47 @@ struct message {
 };
 
 void terminate(int sig) {
-    printf("Server shutting down...\n");
+    printf("Exiting....\n");
     fflush(stdout);
     exit(0);
 }
 
 int main() {
-    int server_fd, dummy_fd, target_fd;
+    int server, dummyfd, targetfd;
     struct message req;
 
-    // Ignore SIGPIPE so writes to closed FIFOs don't kill us
     signal(SIGPIPE, SIG_IGN);
-    // Handle Ctrl+C to exit cleanly
-    signal(SIGINT, terminate);
+    signal(SIGINT,  terminate);
 
-    // Ensure the server FIFO exists
+    // ensure FIFO exists
     mkfifo("serverFIFO", 0666);
 
-    // Open server FIFO for reading and also open a dummy write end
-    server_fd = open("serverFIFO", O_RDONLY);
-    if (server_fd < 0) {
-        perror("open serverFIFO for read failed");
-        exit(1);
-    }
-    dummy_fd = open("serverFIFO", O_WRONLY);
-    if (dummy_fd < 0) {
-        perror("open serverFIFO for dummy write failed");
-        close(server_fd);
+    server  = open("serverFIFO", O_RDONLY);
+    dummyfd = open("serverFIFO", O_WRONLY);
+    if (server < 0 || dummyfd < 0) {
+        perror("opening serverFIFO failed");
         exit(1);
     }
 
     while (1) {
-        // Read the next message request
-        ssize_t n = read(server_fd, &req, sizeof(req));
-        if (n <= 0) {
-            // Either no data or FIFO closed; keep looping
+        if (read(server, &req, sizeof(req)) <= 0)
             continue;
-        }
 
-        // Log receipt
         printf("Received a request from %s to send the message \"%s\" to %s.\n",
                req.source, req.msg, req.target);
         fflush(stdout);
 
-        // Open the target user's FIFO and forward the message
-        target_fd = open(req.target, O_WRONLY);
-        if (target_fd < 0) {
+        targetfd = open(req.target, O_WRONLY);
+        if (targetfd < 0) {
             perror("open target FIFO failed");
             continue;
         }
 
-        write(target_fd, &req, sizeof(req));
-        close(target_fd);
+        write(targetfd, &req, sizeof(req));
+        close(targetfd);
     }
 
-    // Cleanup (unreachable in this loop, but good practice)
-    close(server_fd);
-    close(dummy_fd);
+    close(server);
+    close(dummyfd);
     return 0;
 }
