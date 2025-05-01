@@ -10,7 +10,7 @@
 
 struct message {
     char source[50];
-    char target[50];
+    char target[50]; 
     char msg[200];
 };
 
@@ -27,7 +27,7 @@ int main() {
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT,  terminate);
 
-    // ensure FIFO exists
+    /* ensure the FIFO exists */
     mkfifo("serverFIFO", 0666);
 
     server  = open("serverFIFO", O_RDONLY);
@@ -41,7 +41,8 @@ int main() {
         if (read(server, &req, sizeof(req)) <= 0)
             continue;
 
-        printf("Received a request from %s to send the message \"%s\" to %s.\n",
+        /* note: NO quotes around %s here */
+        printf("Received a request from %s to send the message %s to %s.\n",
                req.source, req.msg, req.target);
         fflush(stdout);
 
